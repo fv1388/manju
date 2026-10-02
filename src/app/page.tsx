@@ -54,6 +54,8 @@ export default function Page() {
   const [tone, setTone] = useState("hook-driven");
   const [chapters, setChapters] = useState(3);
   const [segments, setSegments] = useState(2);
+  const [mode, setMode] = useState<"idea" | "novel">("idea");
+  const [novel, setNovel] = useState("");
 
   const [script, setScript] = useState<Script | null>(null);
   const [storyboard, setStoryboard] = useState<Storyboard | null>(null);
@@ -75,7 +77,16 @@ export default function Page() {
       const res = await fetch("/api/script", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea, genre, style, ratio, tone, chapters, segments }),
+        body: JSON.stringify({
+          idea: mode === "idea" ? idea : "",
+          novelText: mode === "novel" ? novel : undefined,
+          genre,
+          style,
+          ratio,
+          tone,
+          chapters,
+          segments,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "生成失败");
@@ -84,7 +95,7 @@ export default function Page() {
       try {
         localStorage.setItem(
           "manju_last",
-          JSON.stringify({ idea, script: data.script, storyboard: data.storyboard })
+          JSON.stringify({ idea, novel, mode, script: data.script, storyboard: data.storyboard })
         );
       } catch {
         /* ignore */
@@ -172,6 +183,8 @@ export default function Page() {
           setScript(d.script);
           setStoryboard(d.storyboard);
           if (d.idea) setIdea(d.idea);
+          if (d.mode) setMode(d.mode);
+          if (d.novel) setNovel(d.novel);
         }
       }
     } catch {
@@ -238,9 +251,28 @@ export default function Page() {
       </p>
 
       <div className="card">
-        <h2>1 · Story Idea</h2>
-        <label>Idea (一句话故事点子)</label>
-        <textarea value={idea} onChange={(e) => setIdea(e.target.value)} />
+        <h2>1 · Story</h2>
+        <label>模式 Mode</label>
+        <select value={mode} onChange={(e) => setMode(e.target.value as "idea" | "novel")}>
+          <option value="idea">一句话点子 (Idea)</option>
+          <option value="novel">小说改编 (Novel)</option>
+        </select>
+        {mode === "idea" ? (
+          <>
+            <label>Idea (一句话故事点子)</label>
+            <textarea value={idea} onChange={(e) => setIdea(e.target.value)} />
+          </>
+        ) : (
+          <>
+            <label>小说 / 长文本 (粘贴全文，豆包自动改编成短剧)</label>
+            <textarea
+              rows={10}
+              placeholder="Paste your novel / long text here — Doubao will adapt it into a short drama…"
+              value={novel}
+              onChange={(e) => setNovel(e.target.value)}
+            />
+          </>
+        )}
 
         <div className="row">
           <div>

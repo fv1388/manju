@@ -31,15 +31,21 @@ export async function buildScript(cfg: DramaConfig): Promise<Script> {
 }
 
 async function buildScriptWithLLM(cfg: DramaConfig): Promise<Script> {
+  const isNovel = !!cfg.novelText;
   const userPrompt = [
-    `Idea: ${cfg.idea}`,
+    isNovel
+      ? `Source text (adapt this into a short drama; keep the core premise, protagonists and key twist):\n"""\n${cfg.novelText!.slice(0, 24000)}\n"""`
+      : `Idea: ${cfg.idea}`,
     `Genre: ${cfg.genre}`,
     `Style: ${cfg.style}`,
     `Aspect ratio: ${cfg.ratio}`,
     `Tone: ${cfg.tone}`,
     `Chapters: ${cfg.chapters}`,
     `Segments per chapter (each 15s): ${cfg.segmentsPerChapter}`,
-  ].join("\n");
+    isNovel
+      ? "Adapt the source into a tight hook-driven short drama: compress the plot into the requested chapters of 15s segments, keep protagonists/scenes and deliver a strong final twist. Output STRICT JSON per the system rules."
+      : "",
+  ].filter(Boolean).join("\n");
   const raw = await chat(
     [
       { role: "system", content: SYSTEM_PROMPT },
@@ -55,6 +61,7 @@ async function buildScriptWithLLM(cfg: DramaConfig): Promise<Script> {
 function buildScriptLocal(cfg: DramaConfig): Script {
   const g = cfg.genre || "drama";
   const style = cfg.style || "cinematic";
+  const ideaText = cfg.idea || (cfg.novelText || "").slice(0, 60) || "Untitled drama";
   const heroName = "Alex";
   const love = "Maya";
 
@@ -123,7 +130,7 @@ function buildScriptLocal(cfg: DramaConfig): Script {
   }
 
   return {
-    title: `${ideaTitle(cfg.idea)} — A ${genreWord(cfg)}`,
+    title: `${ideaTitle(ideaText)} — A ${genreWord(cfg)}`,
     logline: hookLines[0],
     synopsis: `In this ${cfg.chapters * cfg.segmentsPerChapter * 15}s ${genreWord(cfg)} short, ${heroName} is forced into a game of survival. Betrayed and outnumbered, he and ${love} must outsmart Marcus before time runs out. Hook, escalate, twist, payoff.`,
     characters,

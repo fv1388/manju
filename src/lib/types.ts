@@ -74,6 +74,7 @@ export interface VideoJob {
 /** 生成配置 */
 export interface DramaConfig {
   idea: string; // 一句话故事点子
+  novelText?: string; // 小说/长文本源，存在时按小说改编成短剧剧本
   genre: string; // 题材
   style: string; // 画风
   ratio: Ratio;

@@ -15,11 +15,12 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "JSON 解析失败" }, { status: 400 });
   }
-  if (!body.idea) {
-    return NextResponse.json({ error: "缺少 idea（故事点子）" }, { status: 400 });
+  if (!body.idea && !body.novelText) {
+    return NextResponse.json({ error: "缺少 idea（故事点子）或小说文本" }, { status: 400 });
   }
   const cfg: DramaConfig = {
-    idea: String(body.idea),
+    idea: String(body.idea || ""),
+    novelText: body.novelText ? String(body.novelText) : undefined,
     genre: String(body.genre || "drama"),
     style: String(body.style || "cinematic"),
     ratio: (body.ratio as Ratio) || "9:16",
