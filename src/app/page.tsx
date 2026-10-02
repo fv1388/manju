@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface Segment {
   index: number;
@@ -81,6 +81,14 @@ export default function Page() {
       if (!res.ok) throw new Error(data.error || "生成失败");
       setScript(data.script);
       setStoryboard(data.storyboard);
+      try {
+        localStorage.setItem(
+          "manju_last",
+          JSON.stringify({ idea, script: data.script, storyboard: data.storyboard })
+        );
+      } catch {
+        /* ignore */
+      }
       setStatus(`Done. ${storyboard?.chapters.length ?? ""} chapters · video prompts ready.`);
     } catch (e: any) {
       setIsErr(true);
@@ -152,6 +160,72 @@ export default function Page() {
     } catch {
       /* ignore */
     }
+  }
+
+  // 刷新/重开后恢复上一次生成的剧本
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("manju_last");
+      if (raw) {
+        const d = JSON.parse(raw);
+        if (d && d.script && d.storyboard) {
+          setScript(d.script);
+          setStoryboard(d.storyboard);
+          if (d.idea) setIdea(d.idea);
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  function buildMarkdown(s: Script, sb: Storyboard): string {
+    const lines: string[] = [];
+    lines.push(`# ${s.title}`);
+    lines.push("");
+    lines.push(`**Logline:** ${s.logline}`);
+    lines.push("");
+    lines.push(`**Synopsis:** ${s.synopsis}`);
+    lines.push("");
+    lines.push(`**Ratio:** ${sb.ratio} · **Style:** ${sb.style} · **Tone:** ${tone}`);
+    lines.push("");
+    lines.push("## Characters");
+    s.characters.forEach((c) =>
+      lines.push(`- **${c.name}** (${c.role}): ${c.appearance}. ${c.personality}. Goal: ${c.goal}`)
+    );
+    lines.push("");
+    lines.push("## Scenes");
+    s.scenes.forEach((sc) => lines.push(`- **${sc.id} ${sc.name}**: ${sc.visual}`));
+    lines.push("");
+    sb.chapters.forEach((ch) => {
+      lines.push(`## ${ch.id} · ${ch.title}`);
+      ch.beats.forEach((b) => lines.push(`- ${b}`));
+      lines.push("");
+      ch.segments.forEach((sg) => {
+        lines.push(`### [${ch.id}#${sg.index}] ${sg.shot}`);
+        lines.push(`Dialogue: ${sg.dialogue || "(silent)"} · Camera: ${sg.camera} · Emotion: ${sg.emotion}`);
+        lines.push(`Video prompt: ${sg.visualPrompt}`);
+        lines.push("");
+      });
+    });
+    return lines.join("\n");
+  }
+
+  async function downloadMd() {
+    if (!script || !storyboard) return;
+    const md = buildMarkdown(script, storyboard);
+    const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `manju-${(script.title || "script")
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .slice(0, 40)}.md`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -231,6 +305,13 @@ export default function Page() {
         <>
           <div className="card">
             <h2>2 · Script</h2>
+            <button
+              className="btn small"
+              onClick={downloadMd}
+              style={{ marginBottom: 12 }}
+            >
+              💾 保存 / 下载剧本 (.md)
+            </button>
             <h1 style={{ fontSize: 22 }}>{script.title}</h1>
             <p>
               <em>{script.logline}</em>
