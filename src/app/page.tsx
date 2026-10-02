@@ -44,7 +44,7 @@ interface Storyboard {
 
 type SegKey = string; // e.g. "C1#1"
 
-const ACCESS_CODE = "manju1388"; // 访问口令：防陌生人白嫖模型额度（与后端一致）
+const ACCESS_CODE = "wang@1388"; // 访问口令：防陌生人白嫖模型额度（与后端一致）
 
 export default function Page() {
   const [idea, setIdea] = useState(
