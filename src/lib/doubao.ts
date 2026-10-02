@@ -14,7 +14,7 @@ const API_KEY = process.env.ARK_API_KEY || "";
 const LLM_MODEL =
   process.env.DOUBAO_LLM_MODEL || "doubao-1-5-pro-32k-250115";
 const SEEDREAM_MODEL =
-  process.env.SEEDREAM_MODEL || "doubao-seedream-3-0-t2i-250415";
+  process.env.SEEDREAM_MODEL || "doubao-seedream-5-0-flash-260915";
 const SEEDANCE_MODEL =
   process.env.SEEDANCE_MODEL || "doubao-seedance-1-0-pro-video-250528";
 

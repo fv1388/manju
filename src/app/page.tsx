@@ -68,6 +68,9 @@ export default function Page() {
   const [videos, setVideos] = useState<Record<SegKey, string>>({});
   const [busy, setBusy] = useState<Record<SegKey, string>>({});
   const [copied, setCopied] = useState<SegKey | null>(null);
+  const [framesBusy, setFramesBusy] = useState(false);
+  const [framesDone, setFramesDone] = useState(0);
+  const [framesTotal, setFramesTotal] = useState(0);
 
   async function generateDrama() {
     setLoading(true);
@@ -161,6 +164,31 @@ export default function Page() {
     } finally {
       setBusy((b) => ({ ...b, [key]: "" }));
     }
+  }
+
+  // 一键生成全部片段的关键帧图（逐片段顺序调用，跳过已生成的）
+  async function generateAllFrames() {
+    if (!storyboard) return;
+    const segs: { key: SegKey; prompt: string }[] = [];
+    for (const ch of storyboard.chapters)
+      for (const sg of ch.segments) {
+        const key = `${ch.id}#${sg.index}`;
+        if (!frames[key]) segs.push({ key, prompt: sg.visualPrompt });
+      }
+    if (segs.length === 0) {
+      setStatus("所有片段的关键帧都已生成。");
+      return;
+    }
+    setFramesBusy(true);
+    setFramesDone(0);
+    setFramesTotal(segs.length);
+    setStatus(`开始生成 ${segs.length} 张关键帧图…`);
+    for (const s of segs) {
+      await genFrame(s.key, s.prompt);
+      setFramesDone((n) => n + 1);
+    }
+    setFramesBusy(false);
+    setStatus(`✅ 全部 ${segs.length} 张关键帧图生成完成。`);
   }
 
   async function copyPrompt(key: SegKey, text: string) {
@@ -366,6 +394,16 @@ export default function Page() {
 
           <div className="card">
             <h2>3 · Storyboard & Video Prompts</h2>
+            <button
+              className="btn small"
+              onClick={generateAllFrames}
+              disabled={framesBusy}
+              style={{ marginBottom: 12 }}
+            >
+              {framesBusy
+                ? `⚡ 生成关键帧中 ${framesDone}/${framesTotal}…`
+                : "⚡ 一键生成全部关键帧图"}
+            </button>
             {storyboard.chapters.map((ch) => (
               <div className="chapter" key={ch.id}>
                 <h3>
