@@ -44,6 +44,8 @@ interface Storyboard {
 
 type SegKey = string; // e.g. "C1#1"
 
+const ACCESS_CODE = "manju1388"; // 访问口令：防陌生人白嫖模型额度（与后端一致）
+
 export default function Page() {
   const [idea, setIdea] = useState(
     "A broke delivery boy fakes being a CEO to win back his ex-girlfriend."
@@ -72,6 +74,25 @@ export default function Page() {
   const [framesDone, setFramesDone] = useState(0);
   const [framesTotal, setFramesTotal] = useState(0);
 
+  // 访问口令门
+  const [authed, setAuthed] = useState(false);
+  const [codeInput, setCodeInput] = useState("");
+  const [codeErr, setCodeErr] = useState("");
+
+  async function tryAuth() {
+    if (codeInput === ACCESS_CODE) {
+      try {
+        localStorage.setItem("manju_auth", ACCESS_CODE);
+      } catch {
+        /* ignore */
+      }
+      setAuthed(true);
+      setCodeErr("");
+    } else {
+      setCodeErr("口令错误，请重试。");
+    }
+  }
+
   async function generateDrama() {
     setLoading(true);
     setStatus("Generating script + storyboard + video prompts…");
@@ -89,6 +110,7 @@ export default function Page() {
           tone,
           chapters,
           segments,
+          accessCode: localStorage.getItem("manju_auth") || "",
         }),
       });
       const data = await res.json();
@@ -120,7 +142,7 @@ export default function Page() {
       const res = await fetch("/api/frames", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, ratio }),
+        body: JSON.stringify({ prompt, ratio, accessCode: localStorage.getItem("manju_auth") || "" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "生图失败");
@@ -149,7 +171,7 @@ export default function Page() {
       const res = await fetch("/api/video", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageBase64: base64, prompt, ratio }),
+        body: JSON.stringify({ imageBase64: base64, prompt, ratio, accessCode: localStorage.getItem("manju_auth") || "" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "视频生成失败");
@@ -204,6 +226,7 @@ export default function Page() {
   // 刷新/重开后恢复上一次生成的剧本
   useEffect(() => {
     try {
+      if (localStorage.getItem("manju_auth") === ACCESS_CODE) setAuthed(true);
       const raw = localStorage.getItem("manju_last");
       if (raw) {
         const d = JSON.parse(raw);
@@ -267,6 +290,28 @@ export default function Page() {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  }
+
+  if (!authed) {
+    return (
+      <div className="container">
+        <h1>🔒 Manju · Protected</h1>
+        <div className="card">
+          <label>Access Code（访问口令）</label>
+          <input
+            type="password"
+            value={codeInput}
+            onChange={(e) => setCodeInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && tryAuth()}
+            placeholder="输入口令后使用"
+          />
+          <button className="btn" onClick={tryAuth}>
+            Unlock 解锁
+          </button>
+          {codeErr && <p className="status err">{codeErr}</p>}
+        </div>
+      </div>
+    );
   }
 
   return (

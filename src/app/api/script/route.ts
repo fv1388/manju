@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { DramaConfig, Ratio, Tone } from "@/lib/types";
 import { generateDrama } from "@/lib/pipeline";
+import { checkAccess } from "@/lib/auth";
 
 function clamp(n: any, min: number, max: number): number {
   const v = parseInt(n, 10);
@@ -14,6 +15,9 @@ export async function POST(req: Request) {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "JSON 解析失败" }, { status: 400 });
+  }
+  if (!checkAccess(body.accessCode)) {
+    return NextResponse.json({ error: "访问口令错误，无法生成。请联系管理员获取口令。" }, { status: 403 });
   }
   if (!body.idea && !body.novelText) {
     return NextResponse.json({ error: "缺少 idea（故事点子）或小说文本" }, { status: 400 });

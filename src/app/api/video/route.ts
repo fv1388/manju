@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { imageToVideo, hasApiKey } from "@/lib/doubao";
+import { checkAccess } from "@/lib/auth";
 
 export async function POST(req: Request) {
   if (!hasApiKey()) {
@@ -13,6 +14,9 @@ export async function POST(req: Request) {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "JSON 解析失败" }, { status: 400 });
+  }
+  if (!checkAccess(body.accessCode)) {
+    return NextResponse.json({ error: "访问口令错误，无法生成。请联系管理员获取口令。" }, { status: 403 });
   }
   const b64 = body.imageBase64;
   const prompt = body.prompt;
